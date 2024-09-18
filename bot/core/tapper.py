@@ -1,6 +1,5 @@
 import asyncio
 import random
-import time
 from urllib.parse import unquote
 
 import aiohttp
@@ -151,7 +150,8 @@ class Tapper:
             raise error
 
         except Exception as error:
-            logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Unknown error during Authorization: {error}")
+            logger.error(
+                f"<light-yellow>{self.session_name}</light-yellow> | Unknown error during Authorization: {error}")
             await asyncio.sleep(delay=3)
 
     async def auth(self, http_client: aiohttp.ClientSession, init_data):
@@ -192,10 +192,13 @@ class Tapper:
                     "username": f"{str(self.username)}",
                     "referer_id": f"{str(referer_id)}"
                 }
+                response = await http_client.get(url='https://ago-api.hexacore.io/api/user-exists?country_code=null',
+                                                 ssl=False)
+                res = await response.json()
+                if res.get('exists') is True:
+                    return True
                 response = await http_client.post(url='https://ago-api.hexacore.io/api/create-user', json=json,
                                                   ssl=False)
-                #print(await response.text())
-                #print(await response.json())
                 if response.status == 409:
                     return 'registered'
                 if response.status in (200, 201):
@@ -223,6 +226,7 @@ class Tapper:
 
     async def get_balance(self, http_client: aiohttp.ClientSession):
         try:
+
             response = await http_client.get(url=f'https://ago-api.hexacore.io/api/balance/{self.user_id}', ssl=False)
             response_json = await response.json()
             return response_json
@@ -232,7 +236,7 @@ class Tapper:
     async def do_taps(self, http_client: aiohttp.ClientSession, taps):
         try:
             json = {"taps": taps}
-            response = await http_client.post(url=f'https://ago-api.hexacore.io/api/mining-complete', json=json,
+            response = await http_client.post(url='https://ago-api.hexacore.io/api/mining-complete', json=json,
                                               ssl=False)
             response_json = await response.json()
 
@@ -255,7 +259,7 @@ class Tapper:
 
     async def get_missions(self, http_client: aiohttp.ClientSession):
         try:
-            response = await http_client.get(url=f'https://ago-api.hexacore.io/api/missions', ssl=False)
+            response = await http_client.get(url='https://ago-api.hexacore.io/api/missions', ssl=False)
             response_json = await response.json()
             incomplete_mission_ids = [mission['id'] for mission in response_json if (not mission['isCompleted']
                                                                                      and mission['autocomplete'])]
@@ -267,7 +271,7 @@ class Tapper:
     async def do_mission(self, http_client: aiohttp.ClientSession, id):
         try:
             json = {'missionId': id}
-            response = await http_client.post(url=f'https://ago-api.hexacore.io/api/mission-complete', json=json,
+            response = await http_client.post(url='https://ago-api.hexacore.io/api/mission-complete', json=json,
                                               ssl=False)
             response_json = await response.json()
             if not response_json.get('success'):
@@ -278,7 +282,7 @@ class Tapper:
 
     async def get_level_info(self, http_client: aiohttp.ClientSession):
         try:
-            response = await http_client.get(url=f'https://ago-api.hexacore.io/api/level', ssl=False)
+            response = await http_client.get(url='https://ago-api.hexacore.io/api/level', ssl=False)
             response_json = await response.json()
             lvl = response_json.get('lvl')
             upgrade_available = response_json.get('upgrade_available', None)
@@ -292,7 +296,7 @@ class Tapper:
 
     async def level_up(self, http_client: aiohttp.ClientSession):
         try:
-            response = await http_client.post(url=f'https://ago-api.hexacore.io/api/upgrade-level', ssl=False)
+            response = await http_client.post(url='https://ago-api.hexacore.io/api/upgrade-level', ssl=False)
             response_json = await response.json()
             if not response_json.get('success'):
                 return False
@@ -307,7 +311,7 @@ class Tapper:
             response_json = await response.json()
             if response_json.get('available'):
                 json = {"game_id": 1, "user_id": self.user_id}
-                response1 = await http_client.post(url=f'https://ago-api.hexacore.io/api/in-game-reward', json=json,
+                response1 = await http_client.post(url='https://ago-api.hexacore.io/api/in-game-reward', json=json,
                                                    ssl=False)
                 if response1.status in (200, 201):
                     return True
@@ -324,7 +328,7 @@ class Tapper:
             response_json = await response.json()
             if response_json.get('available'):
                 json = {"game_id": 2, "user_id": self.user_id}
-                response1 = await http_client.post(url=f'https://ago-api.hexacore.io/api/in-game-reward', json=json,
+                response1 = await http_client.post(url='https://ago-api.hexacore.io/api/in-game-reward', json=json,
                                                    ssl=False)
                 if response1.status in (200, 201):
                     return True
@@ -336,12 +340,12 @@ class Tapper:
 
     async def play_game_3(self, http_client: aiohttp.ClientSession):
         try:
-            response = await http_client.post(url=f'https://ago-api.hexacore.io/api/games/3/sessions/start', ssl=False)
-            #print(await response.text())
+            response = await http_client.post(url='https://ago-api.hexacore.io/api/games/3/sessions/start', ssl=False)
+            # print(await response.text())
             response = await http_client.get(url=f'https://dirty-job-server.hexacore.io/game/start?'
                                                  f'playerId={self.user_id}', ssl=False)
             text = await response.text()
-            #print(response.status, text[:64])
+            # print(response.status, text[:64])
             response.raise_for_status()
             response_json = await response.json()
 
@@ -352,7 +356,7 @@ class Tapper:
             for i in range(level + 1, games_count):
                 json = {"type": "EndGameLevelEvent", "playerId": str(self.user_id), "level": int(i), "boosted": False,
                         "transactionId": None}
-                response1 = await http_client.post(url=f'https://dirty-job-server.hexacore.io/game/end-game-level',
+                response1 = await http_client.post(url='https://dirty-job-server.hexacore.io/game/end-game-level',
                                                    json=json, ssl=False)
 
                 if response1.status in (200, 201):
@@ -456,7 +460,7 @@ class Tapper:
             response_json = await response.json()
             if response_json.get('available'):
                 json = {"game_id": 5, "user_id": self.user_id}
-                response1 = await http_client.post(url=f'https://ago-api.hexacore.io/api/in-game-reward', json=json,
+                response1 = await http_client.post(url='https://ago-api.hexacore.io/api/in-game-reward', json=json,
                                                    ssl=False)
                 if response1.status in (200, 201):
                     return True
@@ -474,7 +478,7 @@ class Tapper:
 
             http_client.headers['Authorization'] = str(self.user_id)
 
-            response = await http_client.get(url=f'https://hurt-me-please-server.hexacore.io/game/start', ssl=False)
+            response = await http_client.get(url='https://hurt-me-please-server.hexacore.io/game/start', ssl=False)
             response.raise_for_status()
             response_json = await response.json()
 
@@ -491,11 +495,11 @@ class Tapper:
             while limit != 0:
                 json = {"type": "EndGameLevelEvent",
                         "level": int(current_level),
-                        "agoClaimed": float(99.75+random.randint(1, 5)),
+                        "agoClaimed": float(99.75 + random.randint(1, 5)),
                         "boosted": False,
                         "transactionId": None}
 
-                response1 = await http_client.post(url=f'https://hurt-me-please-server.hexacore.io/game/event',
+                response1 = await http_client.post(url='https://hurt-me-please-server.hexacore.io/game/event',
                                                    json=json, ssl=False)
 
                 if response1.status in (200, 201):
@@ -517,7 +521,7 @@ class Tapper:
 
     async def daily_checkin(self, http_client: aiohttp.ClientSession):
         try:
-            response = await http_client.get(url=f'https://ago-api.hexacore.io/api/daily-checkin', ssl=False)
+            response = await http_client.get(url='https://ago-api.hexacore.io/api/daily-checkin', ssl=False)
             response_json = await response.json()
 
             status = response_json.get('is_available')
@@ -525,7 +529,7 @@ class Tapper:
 
             if status is True:
                 json_payload = {"day": next_day}
-                response_daily = await http_client.post(url=f'https://ago-api.hexacore.io/api/daily-checkin',
+                response_daily = await http_client.post(url='https://ago-api.hexacore.io/api/daily-checkin',
                                                         json=json_payload, ssl=False)
                 response_json_daily = await response_daily.json()
                 if response_json_daily.get('success') is True:
@@ -539,7 +543,7 @@ class Tapper:
 
     async def get_tap_passes(self, http_client: aiohttp.ClientSession):
         try:
-            response = await http_client.get(url=f'https://ago-api.hexacore.io/api/get-tap-passes', ssl=False)
+            response = await http_client.get(url='https://ago-api.hexacore.io/api/get-tap-passes', ssl=False)
             response_json = await response.json()
             return response_json
         except Exception as error:
@@ -548,7 +552,7 @@ class Tapper:
     async def buy_tap_pass(self, http_client: aiohttp.ClientSession):
         try:
             json = {"name": "7_days"}
-            response = await http_client.post(url=f'https://ago-api.hexacore.io/api/buy-tap-passes', json=json,
+            response = await http_client.post(url='https://ago-api.hexacore.io/api/buy-tap-passes', json=json,
                                               ssl=False)
             response_json = await response.json()
             if response_json.get('status') is False:
@@ -579,11 +583,7 @@ class Tapper:
         http_client.headers['Authorization'] = await self.auth(http_client=http_client, init_data=init_data)
         while True:
             try:
-                status = await self.register(http_client=http_client, init_data=init_data)
-                if status is True:
-                    logger.success(f"<light-yellow>{self.session_name}</light-yellow> | Successfully account register")
-                elif status == 'registered':
-                    pass
+                await self.register(http_client=http_client, init_data=init_data)
 
                 info = await self.get_balance(http_client=http_client)
                 balance = info.get("balance") or 0
@@ -595,13 +595,12 @@ class Tapper:
                                    f'streak - {next_day}')
 
                 if settings.AUTO_BUY_PASS:
-                    logger.critical(f"<light-yellow>{self.session_name}</light-yellow> | Passes wont work, tg bot issue, not buying")
-                    #data = await self.get_tap_passes(http_client=http_client)
-                    #if data.get('active_tap_pass') is None and balance >= 1000:
-                    #    status = await self.buy_tap_pass(http_client=http_client)
-                    #    if status:
-                    #        logger.success(
-                    #            f'<light-yellow>{self.session_name}</light-yellow> | Bought taps pass for 7 days')
+                    data = await self.get_tap_passes(http_client=http_client)
+                    if data.get('active_tap_pass') is None and balance >= 1000:
+                        status = await self.buy_tap_pass(http_client=http_client)
+                        if status:
+                            logger.success(
+                                f'<light-yellow>{self.session_name}</light-yellow> | Bought taps pass for 7 days')
 
                 if settings.AUTO_TAP:
                     taps, boosters = await self.get_taps(http_client=http_client)
